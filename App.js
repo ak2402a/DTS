@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons'; // assuming you are using Expo, o
 import HomePage from './src/components/HomePage';
 import SchedulingPage from './src/components/SchedulingPage';
 import SettingsPage from './src/components/SettingsPage';
+import SurveyModal from './src/components/SurveyModal';
 
 const Tab = createBottomTabNavigator();
 

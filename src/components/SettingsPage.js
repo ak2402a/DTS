@@ -1,24 +1,28 @@
-// SettingsPage.js
-import React from 'react';
-import { View, Text, StyleSheet, Button, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Button, StyleSheet, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SETTINGS_SECTIONS = [
-  { id: '1', title: 'My Account Info' },
-  { id: '2', title: 'Preferences' },
-  { id: '3', title: 'Privacy Policy' },
-  { id: '4', title: 'Terms & Conditions' },
-];
+const SettingsScreen = () => {
+  const [theme, setTheme] = useState('light');
 
-const SettingsPage = ({ navigation }) => {
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  async function clearStorage() {
+    try {
+      await AsyncStorage.clear();
+      Alert.alert('Success', 'AsyncStorage has been cleared.');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to clear AsyncStorage.');
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Settings</Text>
-      {SETTINGS_SECTIONS.map(section => (
-        <TouchableOpacity key={section.id} style={styles.sectionItem}>
-          <Text style={styles.sectionText}>{section.title}</Text>
-        </TouchableOpacity>
-      ))}
-      <Button title="Go to Home" onPress={() => navigation.navigate('Home')} />
+      <Text>Current theme: {theme}</Text>
+      <Button title="Toggle Theme" onPress={toggleTheme} />
+      <Button title="Clear AsyncStorage" onPress={clearStorage} />
     </View>
   );
 };
@@ -26,21 +30,9 @@ const SettingsPage = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 15,
-  },
-  header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  sectionItem: {
-    padding: 10,
-    borderBottomColor: '#ccc',
-    borderBottomWidth: 1,
-  },
-  sectionText: {
-    fontSize: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
-export default SettingsPage;
+export default SettingsScreen;
