@@ -1,50 +1,73 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Button, FlatList, TouchableOpacity, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, Button, FlatList, TouchableOpacity, Modal } from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import TasksContext from './TasksContext'; 
 import AddTaskModal from './AddTaskModal'; 
 
 const SchedulingPage = ({ navigation }) => {
-  const [events, setEvents] = useState([
-    { id: '1', time: '08:00', title: 'Homework/Museum', date: '2023-10-17' },
-    // ... (existing items)
-  ]);
+  const { tasks, addTask } = useContext(TasksContext);
   const [isAddTaskModalVisible, setAddTaskModalVisible] = useState(false);
-  const [currentDate, setCurrentDate] = useState('2023-10-17');
+  const [isCalendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const addTask = (newTask) => {
-    setEvents([...events, { id: String(events.length + 1), ...newTask }]);
+  const markedDates = {
+    [selectedDate]: { selected: true, marked: true, selectedColor: 'blue' },
   };
 
-  // Sort events by date and time
-  const sortedEvents = [...events].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  const onDateSelect = (day) => {
+    setSelectedDate(day.dateString);
+    setCalendarModalVisible(false);
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TextInput 
-          style={styles.headerText} 
-          value={currentDate} 
-          onChangeText={setCurrentDate} 
-        />
-        <TouchableOpacity onPress={() => setAddTaskModalVisible(true)}>
-          <Ionicons name="add" size={30} color="black" />
+        <TouchableOpacity 
+          style={styles.datePickerButton} 
+          onPress={() => setCalendarModalVisible(true)}
+        >
+          <Text style={styles.datePickerText}>{selectedDate}</Text>
         </TouchableOpacity>
+        <Button title="Add Task" onPress={() => setAddTaskModalVisible(true)} />
       </View>
+
       <FlatList
-        data={sortedEvents.filter(event => event.date === currentDate)}  // Filter by the selected date
+        style={styles.taskList}
+        data={tasks.filter(task => task.date === selectedDate)}
         renderItem={({ item }) => (
-          <View style={styles.eventItem}>
-            <Text style={styles.time}>{item.time}</Text>
-            <Text style={styles.title}>{item.title}</Text>
+          <View style={styles.taskItem}>
+            <Text style={styles.taskTitle}>{item.title}</Text>
           </View>
         )}
         keyExtractor={item => item.id}
       />
-      <Button title="Go to Settings" onPress={() => navigation.navigate('Settings')} />
+
+      <Modal
+        visible={isCalendarModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCalendarModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setCalendarModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Calendar
+              style={styles.calendar}
+              current={selectedDate}
+              onDayPress={onDateSelect}
+              markedDates={markedDates}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <AddTaskModal 
         isVisible={isAddTaskModalVisible} 
         onClose={() => setAddTaskModalVisible(false)} 
-        addTask={addTask}
+        addTask={(newTask) => addTask({ ...newTask, date: selectedDate })}
       />
     </View>
   );
@@ -57,26 +80,58 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  eventItem: {
-    flexDirection: 'row',
     marginBottom: 15,
   },
-  time: {
-    fontSize: 18,
-    width: 50,
+  datePickerButton: {
+    borderWidth: 1,
+    borderColor: 'lightgray',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginRight: 10, 
+    marginLeft: 15, 
+    marginTop: 10, 
+    width: 120, 
+    alignSelf: 'flex-start', 
   },
-  title: {
+  datePickerText: {
+    fontSize: 16,
+  },
+  taskList: {
+    flex: 1,
+  },
+  taskItem: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  taskTitle: {
     fontSize: 18,
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dimmed background
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 10,
+    width: '80%',
+    maxWidth: 300, // You can adjust this as needed
+  },
+  calendar: {
+    borderRadius: 10,
   },
 });
 
 export default SchedulingPage;
-

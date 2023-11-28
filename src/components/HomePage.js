@@ -4,17 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import SurveyModal from './SurveyModal';
 
-const DATA = [
-  { id: '1', title: 'Task One' },
-  { id: '2', title: 'Task Two' },
-  { id: '3', title: 'Task Three' },
-  { id: '4', title: 'Task Four' },
-  { id: '5', title: 'Task Five' },
-];
-
 function HomePage() {
   const navigation = useNavigation();
   const [isSurveyVisible, setSurveyVisible] = useState(false);
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     async function checkLastSurveyDate() {
@@ -25,7 +18,15 @@ function HomePage() {
         setSurveyVisible(true);
       }
     }
-    
+
+    const loadTasks = async () => {
+      const tasksData = await AsyncStorage.getItem('tasks');
+      if (tasksData !== null) {
+        setTasks(JSON.parse(tasksData));
+      }
+    };
+
+    loadTasks();
     checkLastSurveyDate();
   }, []);
 
@@ -43,14 +44,14 @@ function HomePage() {
           <Text>Progress Level</Text>
         </View>
         <FlatList
-          data={DATA}
+          data={tasks.filter(task => task.date === new Date().toISOString().split('T')[0])}
           renderItem={({ item }) => <Text style={styles.taskItem}>{item.title}</Text>}
           keyExtractor={item => item.id}
         />
         <View style={styles.footer}>
-          <Text>Home</Text>
-          <Text>Menu</Text>
-          <Text>Settings</Text>
+          <Button title="Home" onPress={() => navigation.navigate('Home')} />
+          <Button title="Menu" onPress={() => navigation.navigate('Menu')} />
+          <Button title="Settings" onPress={() => navigation.navigate('Settings')} />
         </View>
         <Button title="Go to Scheduling" onPress={() => navigation.navigate('Scheduling')} />
       </View>
@@ -58,6 +59,7 @@ function HomePage() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -84,7 +86,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     marginTop: 20,
   },
 });

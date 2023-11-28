@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet } from 'react-native';
+import { Calendar } from 'react-native-calendars';
 
 const AddTaskModal = ({ isVisible, onClose, addTask }) => {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
-  const [date, setDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
 
   const handleAddTask = () => {
-    addTask({ title, time, date });
+    addTask({ title, time, date: selectedDate });
     setTitle('');
     setTime('');
-    setDate('');
+    setSelectedDate('');
     onClose();
   };
 
@@ -18,9 +19,22 @@ const AddTaskModal = ({ isVisible, onClose, addTask }) => {
     <Modal visible={isVisible} onRequestClose={onClose}>
       <View style={styles.container}>
         <Text style={styles.header}>Add New Task</Text>
+
+        {/* Calendar component to pick a date */}
+        <Calendar
+          current={new Date().toISOString().split('T')[0]}
+          onDayPress={(day) => {
+            setSelectedDate(day.dateString);
+          }}
+          // If you want to mark the selected date in the calendar
+          markedDates={{
+            [selectedDate]: { selected: true, marked: true, selectedColor: 'blue' },
+          }}
+        />
+
         <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
-        <TextInput style={styles.input} placeholder="Time" value={time} onChangeText={setTime} />
-        <TextInput style={styles.input} placeholder="Date" value={date} onChangeText={setDate} />
+        <TextInput style={styles.input} placeholder="Time (e.g., 10:00)" value={time} onChangeText={setTime} />
+        {}
         <Button title="Add Task" onPress={handleAddTask} />
         <Button title="Cancel" onPress={onClose} />
       </View>
