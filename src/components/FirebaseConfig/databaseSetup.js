@@ -26,4 +26,3 @@ import { getDatabase } from "firebase/database"
 
     var db = getDatabase(app);
 export default db;
-
