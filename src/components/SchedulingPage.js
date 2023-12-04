@@ -1,18 +1,40 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Button, FlatList, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import TasksContext from './TasksContext'; 
-import AddTaskModal from './AddTaskModal'; 
+import db from './FirebaseConfig/databaseSetup';
+import { ref, onValue, push, set } from "firebase/database";
+import AddTaskModal from './AddTaskModal';
+import TimeSlot from './TimeSlot';
 
 const SchedulingPage = ({ navigation }) => {
-  const { tasks, addTask } = useContext(TasksContext);
+  const [tasks, setTasks] = useState([]);
   const [isAddTaskModalVisible, setAddTaskModalVisible] = useState(false);
   const [isCalendarModalVisible, setCalendarModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const markedDates = {
-    [selectedDate]: { selected: true, marked: true, selectedColor: 'blue' },
+  useEffect(() => {
+    const tasksRef = ref(db, 'tasks/');
+    const unsubscribe = onValue(tasksRef, (snapshot) => {
+      const data = snapshot.val();
+      const loadedTasks = data ? Object.keys(data).map(key => ({ ...data[key], id: key })) : [];
+      setTasks(loadedTasks);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Function to check if a task falls within a specific hour
+  const isTaskInHour = (task, hour) => {
+    const taskStartTime = new Date(`1970-01-01T${task.time}`);
+    const taskEndTime = new Date(taskStartTime.getTime() + (task.duration * 60000));
+    const hourStartTime = new Date(`1970-01-01T${hour}`);
+    const nextHourStartTime = new Date(hourStartTime.getTime() + 3600000);
+
+    return (taskStartTime >= hourStartTime && taskStartTime < nextHourStartTime) ||
+           (taskEndTime > hourStartTime && taskEndTime <= nextHourStartTime) ||
+           (taskStartTime <= hourStartTime && taskEndTime >= nextHourStartTime);
   };
+
+  const sortedTasks = tasks.filter(task => task.date === selectedDate);
 
   const onDateSelect = (day) => {
     setSelectedDate(day.dateString);
@@ -31,16 +53,19 @@ const SchedulingPage = ({ navigation }) => {
         <Button title="Add Task" onPress={() => setAddTaskModalVisible(true)} />
       </View>
 
-      <FlatList
-        style={styles.taskList}
-        data={tasks.filter(task => task.date === selectedDate)}
-        renderItem={({ item }) => (
-          <View style={styles.taskItem}>
-            <Text style={styles.taskTitle}>{item.title}</Text>
-          </View>
-        )}
-        keyExtractor={item => item.id}
-      />
+      <ScrollView style={styles.scheduleContainer}>
+      {Array.from({ length: 24 }, (_, index) => {
+        const hour = index < 10 ? `0${index}:00` : `${index}:00`;
+        const hourTasks = sortedTasks.filter(task => isTaskInHour(task, hour));
+        return (
+          <TimeSlot 
+            key={hour}
+            time={hour}
+            tasks={hourTasks}
+          />
+        );
+      })}
+      </ScrollView>
 
       <Modal
         visible={isCalendarModalVisible}
@@ -58,20 +83,22 @@ const SchedulingPage = ({ navigation }) => {
               style={styles.calendar}
               current={selectedDate}
               onDayPress={onDateSelect}
-              markedDates={markedDates}
+              markedDates={{
+                [selectedDate]: { selected: true, marked: true, selectedColor: 'blue' }
+              }}
             />
           </View>
         </TouchableOpacity>
       </Modal>
 
-      <AddTaskModal 
+      <AddTaskModal
         isVisible={isAddTaskModalVisible} 
         onClose={() => setAddTaskModalVisible(false)} 
-        addTask={(newTask) => addTask({ ...newTask, date: selectedDate })}
       />
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -80,7 +107,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
@@ -90,17 +117,33 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 4,
-    marginRight: 10, 
-    marginLeft: 15, 
-    marginTop: 10, 
-    width: 120, 
-    alignSelf: 'flex-start', 
+    marginRight: 10,
+    marginLeft: 15,
+    marginTop: 10,
+    width: 120,
+    alignSelf: 'flex-start',
   },
   datePickerText: {
     fontSize: 16,
   },
-  taskList: {
+  scheduleContainer: {
+    marginTop: 10,
+  },
+  modalOverlay: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    margin: 20,
+    alignSelf: 'center',
+  },
+  calendar: {
+    borderRadius: 10,
   },
   taskItem: {
     backgroundColor: 'white',
@@ -115,22 +158,6 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 18,
     flex: 1,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dimmed background
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    width: '80%',
-    maxWidth: 300, // You can adjust this as needed
-  },
-  calendar: {
-    borderRadius: 10,
   },
 });
 
