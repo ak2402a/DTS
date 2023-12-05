@@ -4,11 +4,6 @@ import db from './FirebaseConfig/databaseSetup';
 import { ref, remove, set } from "firebase/database";
 
 const SettingsScreen = () => {
-  const [theme, setTheme] = useState('light');
-
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
-  };
 
   async function clearFirebaseData() {
     try {
@@ -23,7 +18,6 @@ const SettingsScreen = () => {
 
   async function clearSurveyData() {
     try {
-      // Set the last survey date to a past date, so the survey will show up next time
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const formattedDate = yesterday.toISOString().split('T')[0];
@@ -38,8 +32,6 @@ const SettingsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text>Current theme: {theme}</Text>
-      <Button title="Toggle Theme" onPress={toggleTheme} />
       <Button title="Clear Firebase Data" onPress={clearFirebaseData} />
       <Button title="Clear Survey Data" onPress={clearSurveyData} />
     </View>

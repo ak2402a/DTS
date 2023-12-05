@@ -7,7 +7,7 @@ import db from './FirebaseConfig/databaseSetup';
 import TasksContext from './TasksContext';
 import { Modal } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { fetchSurveyData, fetchTasksForSelectedDate, optimizeTasks, saveOptimizedTasks } from './optimizeTasks';
+import { fetchSurveyData, fetchAllTasks, optimizeTasks, updateTasksInFirebase } from './optimizeTasks';
 
 
 function HomePage() {
@@ -36,37 +36,26 @@ function HomePage() {
 
   const handleOptimizeTasks = async () => {
     try {
-      // Show loading or some state to indicate processing
-      // e.g., setLoading(true);
-      
-      // Retrieve the survey data and tasks for the selected date
       const surveyData = await fetchSurveyData();
-      const tasksForSelectedDate = await fetchTasksForSelectedDate(selectedDate);
-      
-      // Check if survey data and tasks are retrieved successfully
-      if (surveyData && tasksForSelectedDate.length > 0) {
-        // Optimize tasks based on survey data and tasks
-        const optimizedTasks = optimizeTasks(surveyData, tasksForSelectedDate);
-        
-        // Save the optimized tasks back to Firebase
-        await saveOptimizedTasks(optimizedTasks);
-        
-        // Update the tasks in the context to reflect changes in the UI
-        setTasks(optimizedTasks);
-        
-        // Show success message
-        Alert.alert('Success', 'Tasks optimized successfully.');
+      const allTasks = await fetchAllTasks();
+  
+      // Proceed only if survey data and tasks are available
+      if (surveyData && allTasks.length > 0) {
+        const optimizedTasks = await optimizeTasks(selectedDate, allTasks, surveyData);
+  
+        // Check if optimizedTasks is an array and has elements
+        if (Array.isArray(optimizedTasks) && optimizedTasks.length > 0) {
+          await updateTasksInFirebase(optimizedTasks); // Update tasks in Firebase
+          Alert.alert('Success', 'Tasks have been optimized successfully.');
+        } else {
+          Alert.alert('Error', 'No tasks were optimized.');
+        }
       } else {
-        // Handle the case where survey data or tasks are not available
-        Alert.alert('Error', 'Could not retrieve survey data or tasks.');
+        Alert.alert('Error', 'No survey data or tasks available for optimization.');
       }
     } catch (error) {
       console.error('Optimization failed:', error);
-      // Handle errors, possibly by showing an alert to the user
       Alert.alert('Error', 'Optimization failed. Please try again later.');
-    } finally {
-      // Hide loading state
-      // e.g., setLoading(false);
     }
   };
 
@@ -117,9 +106,17 @@ function HomePage() {
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { width: `${completionPercentage}%` }]} />
         </View>
-        <Button title="Select Date" onPress={() => setCalendarVisible(true)} />
-        <Button title="Optimize Schedule" onPress={handleOptimizeTasks} />
 
+        <View style={styles.buttonContainer}>
+          <Button 
+            title={`Select Date (${selectedDate})`} 
+            onPress={() => setCalendarVisible(true)} 
+          />
+          <Button 
+            title="Optimize Schedule" 
+            onPress={handleOptimizeTasks} 
+          />
+        </View>
         <Modal
           visible={isCalendarVisible}
           transparent={true}
@@ -146,7 +143,7 @@ function HomePage() {
               <Text style={[styles.taskItem, item.completed && styles.completedTask]}>{item.title}</Text>
             </TouchableOpacity>
           )}
-          keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
+          keyExtractor={item => item.id.toString()}
         />
       </View>
       <SurveyModal isVisible={isSurveyVisible} onClose={closeSurvey} />
@@ -159,6 +156,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginVertical: 10, // Add vertical margin for spacing
   },
   modalContent: {
     backgroundColor: 'white',

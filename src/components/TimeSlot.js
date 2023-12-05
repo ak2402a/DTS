@@ -6,7 +6,6 @@ const TimeSlot = ({ time, tasks }) => {
     <View style={styles.timeSlot}>
       <Text style={styles.timeLabel}>{time}</Text>
       {tasks.map(task => {
-        // Calculate end time based on duration
         const endTime = new Date(new Date(`1970-01-01T${task.time}`).getTime() + task.duration * 60000);
         const endTimeStr = endTime.toTimeString().substring(0, 5); 
 
